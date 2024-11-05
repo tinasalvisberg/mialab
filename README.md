@@ -25,5 +25,19 @@ You will get to know and to use various libraries and software tools needed in t
 Enjoy!
 
 ----
+## Group 6: Is less more when it comes to feature extraction? 
+
+**Hypothesis:** Using radiomics features on top of raw image data improves the segmentation result.
+
+### Installation
+Make sure to install [pyradiomics](https://pyradiomics.readthedocs.io/en/latest/index.html) using `requirement.txt`:
+
+    python -m pip install pyradiomics
+
+Test installation with
+
+    python .\test\test_pyradiomics.py
+
+----
 
 Found a bug or do you have suggestions? Open an issue or better submit a pull request.
