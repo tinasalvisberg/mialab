@@ -236,3 +236,8 @@ xcuserdata/
 ### Project specific stuff
 *.nii.gz
 *.mha
+
+# Exclude data folders
+mialab/data/
+
+
