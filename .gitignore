@@ -240,4 +240,6 @@ xcuserdata/
 # Exclude data folders
 mialab/data/
 
+.idea\aws.xml
+
 

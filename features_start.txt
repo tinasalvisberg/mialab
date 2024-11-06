@@ -1,0 +1,13 @@
+MRI specific recommendations from paper how to Radiomics 
+
+1. Intensity-Based Features: cause MRI gives intensity based images /!\ MRI often has arbitrary units for intensity --> normalise or discretise intensity values across images to maintain consistency.
+
+2. Texture Features: to capture tissue heterogeneity and subtle variations in signal intensity across different regions. Focus on features derived from:
+   - GLCM (e.g., entropy, contrast) for capturing signal variation
+   - GLRLM (e.g., run length non-uniformity) for repetitive texture patterns
+
+3. Shape Features: to distinguish structural differences as they’re independent of the intensity values. Sphericity, compactness, and elongation are relevant, to assess morphology and changes in structure over time.
+
+4. Wavelet-Transformed Features: to enable multi-scale analysis -> capture details at various levels of granularity. Useful for MRI data to highlight both fine and coarse textures, adding robustness across MRI sequences.
+
+Argument : these ensure clinically meaningful segmentation and reduce variability due to the image acquisition process in MRI images data.
