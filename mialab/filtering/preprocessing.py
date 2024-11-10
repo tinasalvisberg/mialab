@@ -3,9 +3,14 @@
 Image pre-processing aims to improve the image quality (image intensities) for subsequent pipeline steps.
 """
 import warnings
+from email.policy import default
+from xml.dom.domreg import registered
 
 import pymia.filtering.filter as pymia_fltr
+import pymia.filtering.registration as pymia_reg
 import SimpleITK as sitk
+from SimpleITK import sitkNearestNeighbor
+from pymia.data import transformation
 
 
 class ImageNormalization(pymia_fltr.Filter):
@@ -126,10 +131,6 @@ class ImageRegistration(pymia_fltr.Filter):
             sitk.Image: The registered image.
         """
 
-        # todo: replace this filter by a registration. Registration can be costly, therefore, we provide you the
-        # transformation, which you only need to apply to the image!
-        warnings.warn('No registration implemented. Returning unregistered image')
-
         atlas = params.atlas
         transform = params.transformation
         is_ground_truth = params.is_ground_truth  # the ground truth will be handled slightly different
@@ -138,7 +139,22 @@ class ImageRegistration(pymia_fltr.Filter):
         # pymia.filtering.registration.MultiModalRegistration. Think about the type of registration, i.e.
         # do you want to register to an atlas or inter-subject? Or just ask us, we can guide you ;-)
 
-        return image
+        # Interpolation method depends on ground truth
+        if is_ground_truth:
+            interpolation = sitk.sitkNearestNeighbor
+        else:
+            interpolation = sitk.sitkLinear
+
+        # Apply registration
+        registered_img = sitk.Resample(
+            image,
+            atlas,
+            transform,
+            interpolation,
+            image.GetPixelIDValue()
+        )
+
+        return registered_img
 
     def __str__(self):
         """Gets a printable string representation.
