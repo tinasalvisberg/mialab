@@ -11,6 +11,7 @@ import pymia.filtering.registration as pymia_reg
 import SimpleITK as sitk
 from SimpleITK import sitkNearestNeighbor
 from pymia.data import transformation
+import numpy as np
 
 
 class ImageNormalization(pymia_fltr.Filter):
@@ -33,8 +34,11 @@ class ImageNormalization(pymia_fltr.Filter):
 
         img_arr = sitk.GetArrayFromImage(image)
 
-        # todo: normalize the image using numpy
-        warnings.warn('No normalization implemented. Returning unprocessed image.')
+        # normalize the image using numpy
+        mean_ = np.mean(img_arr)
+        std_dev = np.std(img_arr)
+        img_arr = (img_arr - mean_) / std_dev
+        #warnings.warn('No normalization implemented. Returning unprocessed image.')
 
         img_out = sitk.GetImageFromArray(img_arr)
         img_out.CopyInformation(image)
