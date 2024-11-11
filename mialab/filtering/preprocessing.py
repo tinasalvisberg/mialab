@@ -86,8 +86,9 @@ class SkullStripping(pymia_fltr.Filter):
         """
         mask = params.img_mask  # the brain mask
 
-        # todo: remove the skull from the image by using the brain mask
-        warnings.warn('No skull-stripping implemented. Returning unprocessed image.')
+        # remove the skull from the image by using the brain mask
+        image = sitk.Mask(image, mask)
+        # warnings.warn('No skull-stripping implemented. Returning unprocessed image.')
 
         return image
 
