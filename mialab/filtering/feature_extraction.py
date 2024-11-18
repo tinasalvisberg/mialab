@@ -4,6 +4,8 @@ import sys
 import numpy as np
 import pymia.filtering.filter as fltr
 import SimpleITK as sitk
+from pymia.filtering.filter import FilterParams
+from radiomics import featureextractor, glcm
 
 
 class AtlasCoordinates(fltr.Filter):
@@ -249,3 +251,31 @@ class RandomizedTrainingMaskGenerator:
         mask.SetSpacing(ground_truth.GetSpacing())
 
         return mask
+
+class TextureFeatureExtractor(fltr.Filter):
+
+    def __init__(self, glcm_features=None):
+        super().__init__()
+
+        self.extractor = featureextractor.RadiomicsFeatureExtractor()
+        self.extractor.disableAllFeatures()
+
+        self.glcm_features = glcm_features if glcm_features is not None else ['Contrast']
+
+        self.extractor.enableFeaturesByName(glcm = [glcm_features])
+
+    def execute(self, image: sitk.Image, mask: np.array, params: FilterParams = None) -> sitk.Image:
+
+        if isinstance(mask, np.ndarray):
+            mask = sitk.GetArrayFromImage(mask.astype(np.uint8))
+            mask.CopyInformation(image)
+
+        feature_vector = self.extractor.execute(image, mask)
+
+        extracted_features = {}
+        for feature in self.glcm_features:
+            feature_key = f'original_glcm_{feature.capitalize()}'
+            extracted_features[feature] = feature_vector.get(feature_key, None)
+
+
+        return extracted_features

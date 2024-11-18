@@ -17,6 +17,7 @@ import mialab.filtering.postprocessing as fltr_postp
 import mialab.filtering.preprocessing as fltr_prep
 import mialab.utilities.multi_processor as mproc
 
+
 atlas_t1 = sitk.Image()
 atlas_t2 = sitk.Image()
 
@@ -45,6 +46,11 @@ class FeatureImageTypes(enum.Enum):
     T2w_INTENSITY = 4
     T2w_GRADIENT_INTENSITY = 5
 
+    T1w_TEXTURE_ENTROPY = 6
+    T2w_TEXTURE_ENTROPY = 7
+    T1w_TEXTURE_CONTRAST = 8
+    T2w_TEXTURE_CONTRAST = 9
+
 
 class FeatureExtractor:
     """Represents a feature extractor."""
@@ -59,7 +65,8 @@ class FeatureExtractor:
         self.training = kwargs.get('training', True)
         self.coordinates_feature = kwargs.get('coordinates_feature', False)
         self.intensity_feature = kwargs.get('intensity_feature', False)
-        self.gradient_intensity_feature = kwargs.get('gradient_intensity_feature', False)
+        self.gradient_intensity_feature = kwargs.get('gradient_intensity_feature', False),
+        self.texture_contrast_feature = kwargs.get('texture_contrast_feature', False)
 
     def execute(self) -> structure.BrainImage:
         """Extracts features from an image.
@@ -90,11 +97,22 @@ class FeatureExtractor:
         if self.gradient_intensity_feature:
             # compute gradient magnitude images
             if structure.BrainImageTypes.T2w in self.img.images:
-                self.img.feature_images[FeatureImageTypes.T1w_GRADIENT_INTENSITY] = \
+                self.img.feature_images[FeatureImageTypes.T2w_GRADIENT_INTENSITY] = \
                     sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T2w])
             else:
                 self.img.feature_images[FeatureImageTypes.T1w_GRADIENT_INTENSITY] = \
                     sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T1w])
+
+        if self.texture_contrast_feature:
+            glcm_feature_extractor = fltr_feat.TextureFeatureExtractor(glcm_features = ['Contrast'])
+
+            if structure.BrainImageTypes.T2w in self.img.images:
+                self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_ENTROPY] = \
+                    glcm_feature_extractor.execute(
+                        self.img.images[structure.BrainImageTypes.T2w],
+
+                    )
+
 
         self._generate_feature_matrix()
 
