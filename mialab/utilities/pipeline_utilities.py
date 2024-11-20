@@ -104,15 +104,20 @@ class FeatureExtractor:
                     sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T1w])
 
         if self.texture_contrast_feature:
-            glcm_feature_extractor = fltr_feat.TextureFeatureExtractor(glcm_features = ['Contrast'])
+            glcm_feature_extractor = fltr_feat.TextureFeatureExtractor(glcm_features=['Contrast'])
 
             if structure.BrainImageTypes.T2w in self.img.images:
-                self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_ENTROPY] = \
+                self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_CONTRAST] = \
                     glcm_feature_extractor.execute(
                         self.img.images[structure.BrainImageTypes.T2w],
-
+                        self.img.images[structure.BrainImageTypes.BrainMask]
                     )
-
+            else:
+                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_CONTRAST] = \
+                    glcm_feature_extractor.execute(
+                        self.img.images[structure.BrainImageTypes.T1w],
+                        self.img.images[structure.BrainImageTypes.BrainMask]
+                    )
 
         self._generate_feature_matrix()
 

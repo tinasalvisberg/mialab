@@ -5,7 +5,7 @@ import numpy as np
 import pymia.filtering.filter as fltr
 import SimpleITK as sitk
 from pymia.filtering.filter import FilterParams
-from radiomics import featureextractor, glcm
+from radiomics import featureextractor
 
 
 class AtlasCoordinates(fltr.Filter):
@@ -252,6 +252,7 @@ class RandomizedTrainingMaskGenerator:
 
         return mask
 
+
 class TextureFeatureExtractor(fltr.Filter):
 
     def __init__(self, glcm_features=None):
@@ -260,22 +261,44 @@ class TextureFeatureExtractor(fltr.Filter):
         self.extractor = featureextractor.RadiomicsFeatureExtractor()
         self.extractor.disableAllFeatures()
 
-        self.glcm_features = glcm_features if glcm_features is not None else ['Contrast']
+        self.glcm_features = glcm_features or ['Contrast']
 
-        self.extractor.enableFeaturesByName(glcm = [glcm_features])
+        self.extractor.enableFeaturesByName(glcm=self.glcm_features)
 
-    def execute(self, image: sitk.Image, mask: np.array, params: FilterParams = None) -> sitk.Image:
+    def execute(self, image: sitk.Image, mask: np.array = None, params: FilterParams = None) -> sitk.Image:
+        """
+        Extract GLCM features.
 
+        Args:
+            image (sitk.Image): The input image.
+            mask (np.array): Binary mask array.
+            params (FilterParams): Parameters for feature extraction.
+
+        Returns:
+             sitk.Image: Image where each voxel encodes the extracted feature value.
+        """
+
+        # Convert NumPy mask to SimpleITK if necessary
         if isinstance(mask, np.ndarray):
-            mask = sitk.GetArrayFromImage(mask.astype(np.uint8))
+            mask = sitk.GetImageFromArray(mask.astype(np.uint8))
             mask.CopyInformation(image)
 
+        # Initialize array to store the feature image
+        size = sitk.GetArrayFromImage(image).shape
+        feature_image_array = np.zeros(size)
+
+        # Extract features using pyradiomics
         feature_vector = self.extractor.execute(image, mask)
 
-        extracted_features = {}
+        # Extract GLCM specific features
         for feature in self.glcm_features:
             feature_key = f'original_glcm_{feature.capitalize()}'
-            extracted_features[feature] = feature_vector.get(feature_key, None)
+            if feature_key in feature_vector:
+                # Assign the value for the entire feature map
+                feature_image_array += feature_vector[feature_key]
 
+        # Convert feature array back to SimpleITK image
+        feature_image = sitk.GetImageFromArray(feature_image_array)
+        feature_image.CopyInformation(image)
 
-        return extracted_features
+        return feature_image
