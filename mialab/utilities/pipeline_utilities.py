@@ -273,6 +273,7 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
 
     # update image properties to atlas image properties after registration
     img.image_properties = conversion.ImageProperties(img.images[structure.BrainImageTypes.T1w])
+    img.image_properties = conversion.ImageProperties(img.images[structure.BrainImageTypes.T2w])
 
     # extract the features
     feature_extractor = FeatureExtractor(img, **kwargs)
