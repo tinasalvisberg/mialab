@@ -125,7 +125,7 @@ class FeatureExtractor:
                         self.img.images[structure.BrainImageTypes.BrainMask]
                     )
 
-            self._generate_feature_matrix()
+        self._generate_feature_matrix()
 
         return self.img
 
