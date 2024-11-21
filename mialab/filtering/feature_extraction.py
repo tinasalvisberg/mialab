@@ -255,15 +255,19 @@ class RandomizedTrainingMaskGenerator:
 
 class TextureFeatureExtractor(fltr.Filter):
 
-    def __init__(self, glcm_features=None):
+    VALID_GLCM_FEATURES = ['Contrast', 'DifferenceEntropy']
+
+    def __init__(self, glcm_feature: str):
         super().__init__()
 
-        self.extractor = featureextractor.RadiomicsFeatureExtractor()
-        self.extractor.disableAllFeatures()
+        if glcm_feature.lower() == 'entropy':
+            glcm_feature = 'DifferenceEntropy'
+        elif glcm_feature.lower() == 'contrast':
+            glcm_feature = 'Contrast'
 
-        self.glcm_features = glcm_features or ['Contrast']
-
-        self.extractor.enableFeaturesByName(glcm=self.glcm_features)
+        if glcm_feature not in self.VALID_GLCM_FEATURES:
+            raise ValueError(f"Invalid GLCM feature: '{glcm_feature}'. Must be listed in VALID_GLCM_FEATURES")
+        self.glcm_feature = glcm_feature
 
     def execute(self, image: sitk.Image, mask: np.array = None, params: FilterParams = None) -> sitk.Image:
         """
@@ -278,24 +282,29 @@ class TextureFeatureExtractor(fltr.Filter):
              sitk.Image: Image where each voxel encodes the extracted feature value.
         """
 
+        # Initialize feature extractor from pyradiomics
+        extractor = featureextractor.RadiomicsFeatureExtractor()
+        extractor.enableFeatureClassByName('glcm')
+
+        # Enable specific GLCM features based
+        extractor.enableFeaturesByName(**{self.glcm_feature: True})
+
         # Convert NumPy mask to SimpleITK if necessary
         if isinstance(mask, np.ndarray):
             mask = sitk.GetImageFromArray(mask.astype(np.uint8))
             mask.CopyInformation(image)
 
-        # Initialize array to store the feature image
-        size = sitk.GetArrayFromImage(image).shape
-        feature_image_array = np.zeros(size)
-
         # Extract features using pyradiomics
-        feature_vector = self.extractor.execute(image, mask)
+        feature_vector = extractor.execute(image, mask)
 
         # Extract GLCM specific features
-        for feature in self.glcm_features:
-            feature_key = f'original_glcm_{feature.capitalize()}'
-            if feature_key in feature_vector:
-                # Assign the value for the entire feature map
-                feature_image_array += feature_vector[feature_key]
+        feature_key = f'original_glcm_{self.glcm_feature}'
+        if feature_key not in feature_vector:
+            raise ValueError(f"Feature 'original_glcm_{self.glcm_feature}' not found in extracted features")
+
+        # Assign the value for the entire feature map
+        feature_value = feature_vector[feature_key]
+        feature_image_array = np.full(sitk.GetArrayFromImage(image).shape, feature_value, dtype=np.float32)
 
         # Convert feature array back to SimpleITK image
         feature_image = sitk.GetImageFromArray(feature_image_array)
