@@ -66,7 +66,12 @@ class FeatureExtractor:
         self.coordinates_feature = kwargs.get('coordinates_feature', False)
         self.intensity_feature = kwargs.get('intensity_feature', False)
         self.gradient_intensity_feature = kwargs.get('gradient_intensity_feature', False),
-        self.texture_contrast_feature = kwargs.get('texture_contrast_feature', False)
+
+        self.glcm_features = []
+        if kwargs.get('texture_contrast_feature', False):
+            self.glcm_features.append('contrast')
+        if kwargs.get('texture_entropy_feature', False):
+            self.glcm_features.append('entropy')
 
     def execute(self) -> structure.BrainImage:
         """Extracts features from an image.
@@ -103,16 +108,22 @@ class FeatureExtractor:
                 self.img.feature_images[FeatureImageTypes.T1w_GRADIENT_INTENSITY] = \
                     sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T1w])
 
-        if self.texture_contrast_feature:
-            glcm_feature_extractor = fltr_feat.TextureFeatureExtractor(glcm_features = ['Contrast'])
+        if self.glcm_features:
+            for feature in self.glcm_features:
+                glcm_feature_extractor = fltr_feat.TextureFeatureExtractor(glcm_feature=feature)
 
-            if structure.BrainImageTypes.T2w in self.img.images:
-                self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_ENTROPY] = \
-                    glcm_feature_extractor.execute(
+                if structure.BrainImageTypes.T2w in self.img.images:
+                    feature_type = FeatureImageTypes[f"T2w_TEXTURE_{feature.upper()}"]
+                    self.img.feature_images[feature_type] = glcm_feature_extractor.execute(
                         self.img.images[structure.BrainImageTypes.T2w],
-
+                        self.img.images[structure.BrainImageTypes.BrainMask]
                     )
-
+                else:
+                    feature_type = FeatureImageTypes[f"T1w_TEXTURE_{feature.upper()}"]
+                    self.img.feature_images[feature_type] = glcm_feature_extractor.execute(
+                        self.img.images[structure.BrainImageTypes.T1w],
+                        self.img.images[structure.BrainImageTypes.BrainMask]
+                    )
 
         self._generate_feature_matrix()
 
