@@ -5,18 +5,27 @@ import pandas as pd
 
 
 def main(result_folder):
-    # todo: load the "results.csv" file from the mia-results directory
-    # todo: read the data into a list
-    # todo: plot the Dice coefficients per label (i.e. white matter, gray matter, hippocampus, amygdala, thalamus)
+    # TODO: plot the Dice coefficients per label (i.e. white matter, gray matter, hippocampus, amygdala, thalamus)
     #  in a boxplot
-    file_path = f'mia-result/{result_folder}'
-    df = pd.read_csv(file_path)
+    results_file_path = f'mia-result/{result_folder}/results.csv'
+    summary_file_path = f'mia-result/{result_folder}/results_summary.csv'
+    df = pd.read_csv(results_file_path, sep=';')
+    summary = pd.read_csv(summary_file_path, sep=';')
 
-    print(f'Your folder is: {result_folder}\n')
+    print(f'Results from: {result_folder}\n')
     print(df.head())
+    print(summary.head())
 
-    # alternative: instead of manually loading/reading the csv file you could also use the pandas package
-    # but you will need to install it first ('pip install pandas') and import it to this file ('import pandas as pd')
+    amygdala = df[df['LABEL'] == 'Amygdala']
+    grey_matter = df[df['LABEL'] == 'GreyMatter']
+
+    print(amygdala.head())
+
+    plt.boxplot([amygdala['DICE'], grey_matter['DICE']])
+    plt.title('Dice score by class')
+    plt.ylabel('Dice')
+    plt.xticks([1, 2], ['Amygdala', 'Grey matter'])
+    plt.show()
 
 
 if __name__ == '__main__':
