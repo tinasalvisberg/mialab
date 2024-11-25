@@ -16,8 +16,20 @@ def main(result_folder):
     metrics = {'DICE': 'Dice score', 'HDRFDST': 'Hausdorff distance'}
 
     for key, value in metrics.items():
-        plt.figure(figsize=(10, 6))
+
         df.boxplot(column=key, by='LABEL', grid=True)
+        unique_labels = df['LABEL'].unique()
+
+        for i, label in enumerate(unique_labels, start=1):
+            # Select data for the current label
+            data_points = df[df['LABEL'] == label][key]
+
+            # Add jitter to the x-coordinates
+            x_positions = np.random.normal(i, 0.04, size=len(data_points))
+
+            # Plot data points
+            plt.scatter(x_positions, data_points, color="blue", alpha=0.6, label="Data Points" if i == 1 else "")
+
         plt.title(f"{value} by label")
         plt.suptitle('')  # Remove the automatic Pandas title
         plt.ylabel(value)
@@ -25,6 +37,7 @@ def main(result_folder):
         # plt.xticks(rotation=45)  # Rotate x-axis labels if needed
         plt.grid(True)
         plt.show()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Plotting the results.")
