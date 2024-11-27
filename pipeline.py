@@ -69,7 +69,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                           'texture_contrast_feature': False,
                           'texture_entropy_feature': False,
                           # GLRLM TODO: Implement GLRLM
-                          'texture_rln:feature': False
+                          'texture_rln_feature': True
                           }
 
     # load images for training and pre-process

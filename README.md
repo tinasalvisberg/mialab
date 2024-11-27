@@ -38,6 +38,11 @@ Test installation with
 
     python .\test\test_pyradiomics.py
 
+### Commands
+Create plots from results
+
+    python plot_results.py MIA_RESULTS_FOLDER_NAME
+
 ----
 
 Found a bug or do you have suggestions? Open an issue or better submit a pull request.

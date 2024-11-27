@@ -76,6 +76,8 @@ class FeatureExtractor:
         if kwargs.get('texture_entropy_feature', False):
             self.glcm_features.append('entropy')
 
+        self.glrlm_features = kwargs.get('glrlm_features', False)
+
     def execute(self) -> structure.BrainImage:
         """Extracts features from an image.
 
@@ -121,18 +123,32 @@ class FeatureExtractor:
                         self.img.images[structure.BrainImageTypes.T2w],
                         self.img.images[structure.BrainImageTypes.BrainMask]
                     )
+                    print(f"T2w: Extracted GLCM feature {feature}")
                 else:
                     feature_type = FeatureImageTypes[f"T1w_TEXTURE_{feature.upper()}"]
                     self.img.feature_images[feature_type] = glcm_feature_extractor.execute(
                         self.img.images[structure.BrainImageTypes.T1w],
                         self.img.images[structure.BrainImageTypes.BrainMask]
                     )
+                    print(f"T2w: Extracted GLCM feature {feature}")
 
         if self.glrlm_features:
             glrlm_feature_extractor = fltr_feat.GlrlmTextureFeatureExtractor("RunLengthNonUniformity")
 
             if structure.BrainImageTypes.T2w in self.img.images:
                 feature_type = FeatureImageTypes[f"T2w_TEXTURE_RLN"]
+                self.img.feature_images[feature_type] = glrlm_feature_extractor.execute(
+                    self.img.images[structure.BrainImageTypes.T2w],
+                    self.img.images[structure.BrainImageTypes.BrainMask]
+                )
+                print(f"T2w: Extracted GLRLM feature")
+            else:
+                feature_type = FeatureImageTypes[f"T1w_TEXTURE_RLN"]
+                self.img.feature_images[feature_type] = glrlm_feature_extractor.execute(
+                    self.img.images[structure.BrainImageTypes.T1w],
+                    self.img.images[structure.BrainImageTypes.BrainMask]
+                )
+                print(f"T1w: Extracted GLRLM feature")
 
 
         self._generate_feature_matrix()
