@@ -33,7 +33,7 @@ LOADING_KEYS = [structure.BrainImageTypes.T1w,
                 structure.BrainImageTypes.RegistrationTransform]  # the list of data we will load
 
 
-def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str):
+def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str):
     """Brain tissue segmentation using decision forests.
 
     The main routine executes the medical image analysis pipeline:
@@ -71,6 +71,11 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                           # GLRLM TODO: Implement GLRLM
                           'texture_rln_feature': True
                           }
+
+    # create a preprocessing directory with timestamp
+    t = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    preprocess_dir = os.path.join(preprocess_dir, t)
+    os.makedirs(preprocess_dir, exist_ok=True)
 
     # load images for training and pre-process
     images = putil.pre_process_batch(crawler.data, pre_process_params, multi_process=False)
@@ -178,6 +183,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        '--preprocess_dir',
+        type=str,
+        default=os.path.normpath(os.path.join(script_dir, './mia-preprocessed')),
+        help='Directory for preprocessed images.'
+    )
+
+    parser.add_argument(
         '--data_atlas_dir',
         type=str,
         default=os.path.normpath(os.path.join(script_dir, './mialab/data/atlas')),
@@ -199,4 +211,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(args.result_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir)
+    main(args.result_dir, args.preprocess_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir)
