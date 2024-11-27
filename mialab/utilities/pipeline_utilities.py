@@ -45,11 +45,14 @@ class FeatureImageTypes(enum.Enum):
     T1w_GRADIENT_INTENSITY = 3
     T2w_INTENSITY = 4
     T2w_GRADIENT_INTENSITY = 5
-
+    #GLCM
     T1w_TEXTURE_ENTROPY = 6
     T2w_TEXTURE_ENTROPY = 7
     T1w_TEXTURE_CONTRAST = 8
     T2w_TEXTURE_CONTRAST = 9
+    #GLRLM
+    T1w_TEXTURE_RLN = 10
+    T2w_TEXTURE_RLN = 11
 
 
 class FeatureExtractor:
@@ -110,7 +113,7 @@ class FeatureExtractor:
 
         if self.glcm_features:
             for feature in self.glcm_features:
-                glcm_feature_extractor = fltr_feat.TextureFeatureExtractor(glcm_feature=feature)
+                glcm_feature_extractor = fltr_feat.GlcmTextureFeatureExtractor(glcm_feature=feature)
 
                 if structure.BrainImageTypes.T2w in self.img.images:
                     feature_type = FeatureImageTypes[f"T2w_TEXTURE_{feature.upper()}"]
@@ -124,6 +127,13 @@ class FeatureExtractor:
                         self.img.images[structure.BrainImageTypes.T1w],
                         self.img.images[structure.BrainImageTypes.BrainMask]
                     )
+
+        if self.glrlm_features:
+            glrlm_feature_extractor = fltr_feat.GlrlmTextureFeatureExtractor("RunLengthNonUniformity")
+
+            if structure.BrainImageTypes.T2w in self.img.images:
+                feature_type = FeatureImageTypes[f"T2w_TEXTURE_RLN"]
+
 
         self._generate_feature_matrix()
 

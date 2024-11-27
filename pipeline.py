@@ -64,11 +64,11 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                           'registration_pre': True,
                           'coordinates_feature': True,
                           'intensity_feature': True,
-                          'gradient_intensity_feature': True,
+                          'gradient_intensity_feature': False,
                           # GLCM
-                          'texture_contrast_feature': True,
-                          'texture_entropy_feature': True,
-                          # GLRLM
+                          'texture_contrast_feature': False,
+                          'texture_entropy_feature': False,
+                          # GLRLM TODO: Implement GLRLM
                           'texture_rln:feature': False
                           }
 
@@ -82,8 +82,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     # Todo: Set Random forest parameters properly
     # warnings.warn('Random forest parameters not properly set.')
     forest = sk_ensemble.RandomForestClassifier(max_features=images[0].feature_matrix[0].shape[1],
-                                                n_estimators=100,
-                                                max_depth=5)
+                                                n_estimators=3,
+                                                max_depth=4)
 
     start_time = timeit.default_timer()
     forest.fit(data_train, labels_train)

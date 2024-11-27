@@ -253,7 +253,7 @@ class RandomizedTrainingMaskGenerator:
         return mask
 
 
-class TextureFeatureExtractor(fltr.Filter):
+class GlcmTextureFeatureExtractor(fltr.Filter):
 
     VALID_GLCM_FEATURES = ['Contrast', 'DifferenceEntropy']
 
@@ -301,6 +301,39 @@ class TextureFeatureExtractor(fltr.Filter):
         feature_key = f'original_glcm_{self.glcm_feature}'
         if feature_key not in feature_vector:
             raise ValueError(f"Feature 'original_glcm_{self.glcm_feature}' not found in extracted features")
+
+        # Assign the value for the entire feature map
+        feature_value = feature_vector[feature_key]
+        feature_image_array = np.full(sitk.GetArrayFromImage(image).shape, feature_value, dtype=np.float32)
+
+        # Convert feature array back to SimpleITK image
+        feature_image = sitk.GetImageFromArray(feature_image_array)
+        feature_image.CopyInformation(image)
+
+        return feature_image
+
+class GlrlmTextureFeatureExtractor(fltr.Filter):
+    def __init__(self, glrlm_feature: str):
+        super().__init__()
+        self.glrlm_feature = 'RunLengthNonUniformity'
+
+    def execute(self, image: sitk.Image, mask: np.array = None, params: FilterParams = None) -> sitk.Image:
+        # Initialize feature extractor
+        extractor = featureextractor.RadiomicsFeatureExtractor()
+        extractor.enableFeatureClassByName('glrlm')
+        extractor.enableFeaturesByName(**{self.glrlm_feature: True})
+
+        if isinstance(mask, np.ndarray):
+            mask = sitk.GetImageFromArray(mask.astype(np.uint8))
+            mask.CopyInformation(image)
+
+        # Extract features using pyradiomics
+        feature_vector = extractor.execute(image, mask)
+
+        # Extract GLCM specific features
+        feature_key = f'original_glrlm_{self.glrlm_feature}'
+        if feature_key not in feature_vector:
+            raise ValueError(f"Feature 'original_glrlm_{self.glrlm_feature}' not found in extracted features")
 
         # Assign the value for the entire feature map
         feature_value = feature_vector[feature_key]
