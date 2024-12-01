@@ -59,9 +59,11 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
                                           futil.BrainImageFilePathGenerator(),
                                           futil.DataDirectoryFilter())
 
-    pre_process_params = {'skullstrip_pre': True,
+    pre_process_params = {'training': True,
+                          'skullstrip_pre': True,
                           'normalization_pre': True,
                           'registration_pre': True,
+                          'load_images_pre': [False, 'path'],
                           'coordinates_feature': True,
                           'intensity_feature': True,
                           'gradient_intensity_feature': False,
@@ -73,9 +75,11 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
                           }
 
     # create a preprocessing directory with timestamp
-    t = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    preprocess_dir = os.path.join(preprocess_dir, t)
-    os.makedirs(preprocess_dir, exist_ok=True)
+    if pre_process_params['load_images_pre'][0] is False:
+        t = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        preprocess_dir = os.path.join(preprocess_dir, t)
+        os.makedirs(preprocess_dir, exist_ok=True)
+        pre_process_params['load_images_pre'][1] = preprocess_dir
 
     # load images for training and pre-process
     images = putil.pre_process_batch(crawler.data, pre_process_params, multi_process=False)
@@ -100,7 +104,7 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
     os.makedirs(result_dir, exist_ok=True)
 
     print('-' * 5, 'Testing...')
-
+    pre_process_params['training'] = False
     # initialize evaluator
     evaluator = putil.init_evaluator()
 

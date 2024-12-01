@@ -246,6 +246,12 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
 
     print('-' * 10, 'Processing', id_)
 
+    # set preprocessing to false if preprocessed images should be loaded
+    if kwargs.get('load_images_pre')[0] is True:
+        kwargs['skullstrip_pre'] = False
+        kwargs['normalization_pre'] = False
+        kwargs['registration_pre'] = False
+
     # load image
     path = paths.pop(id_, '')  # the value with key id_ is the root directory of the image
     path_to_transform = paths.pop(structure.BrainImageTypes.RegistrationTransform, '')
@@ -311,6 +317,19 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
     # update image properties to atlas image properties after registration
     img.image_properties = conversion.ImageProperties(img.images[structure.BrainImageTypes.T1w])
     img.image_properties = conversion.ImageProperties(img.images[structure.BrainImageTypes.T2w])
+
+    # save preprocessed images
+    if kwargs.get('load_images_pre')[0] is False:
+        preprocess_dir = kwargs['load_images_pre'][1]
+        if kwargs.get('training') is True:
+            img_dir = os.path.join(preprocess_dir, 'train', img.id_)
+        else:
+            img_dir = os.path.join(preprocess_dir, 'test', img.id_)
+        os.makedirs(img_dir, exist_ok=True)
+        sitk.WriteImage(img.images[structure.BrainImageTypes.T1w], os.path.join(img_dir, 'T1_Pre.mha'), True)
+        sitk.WriteImage(img.images[structure.BrainImageTypes.T2w], os.path.join(img_dir, 'T2_Pre.mha'), True)
+        sitk.WriteImage(img.images[structure.BrainImageTypes.GroundTruth], os.path.join(img_dir, 'GroundTruth_Pre.mha'), True)
+        sitk.WriteImage(img.images[structure.BrainImageTypes.BrainMask], os.path.join(img_dir, 'BrainMask_Pre.mha'), True)
 
     # extract the features
     feature_extractor = FeatureExtractor(img, **kwargs)
