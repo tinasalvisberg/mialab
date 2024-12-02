@@ -32,6 +32,11 @@ LOADING_KEYS = [structure.BrainImageTypes.T1w,
                 structure.BrainImageTypes.BrainMask,
                 structure.BrainImageTypes.RegistrationTransform]  # the list of data we will load
 
+LOADING_KEYS_PRE = [structure.BrainImageTypes.T1w,
+                    structure.BrainImageTypes.T2w,
+                    structure.BrainImageTypes.GroundTruth,
+                    structure.BrainImageTypes.BrainMask]
+
 
 def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str):
     """Brain tissue segmentation using decision forests.
@@ -53,17 +58,11 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
 
     print('-' * 5, 'Training...')
 
-    # crawl the training image directories
-    crawler = futil.FileSystemDataCrawler(data_train_dir,
-                                          LOADING_KEYS,
-                                          futil.BrainImageFilePathGenerator(),
-                                          futil.DataDirectoryFilter())
-
     pre_process_params = {'training': True,
                           'skullstrip_pre': True,
                           'normalization_pre': True,
                           'registration_pre': True,
-                          'load_images_pre': [False, 'path'],
+                          'load_images_pre': [False, r'C:\Users\tinas\PycharmProjects\mialab\mia-preprocessed\2024-12-02-21-30-15'],
                           'coordinates_feature': True,
                           'intensity_feature': True,
                           'gradient_intensity_feature': False,
@@ -74,12 +73,23 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
                           'texture_rln_feature': True
                           }
 
-    # create a preprocessing directory with timestamp
     if pre_process_params['load_images_pre'][0] is False:
+        # create a preprocessing directory with timestamp
         t = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         preprocess_dir = os.path.join(preprocess_dir, t)
         os.makedirs(preprocess_dir, exist_ok=True)
         pre_process_params['load_images_pre'][1] = preprocess_dir
+        # crawl the training image directories
+        crawler = futil.FileSystemDataCrawler(data_train_dir,
+                                              LOADING_KEYS,
+                                              futil.BrainImageFilePathGenerator(),
+                                              futil.DataDirectoryFilter())
+    else:
+        crawler = futil.FileSystemDataCrawler(os.path.join(pre_process_params['load_images_pre'][1], 'train'),
+                                              LOADING_KEYS_PRE,
+                                              futil.BrainImageFilePathGenerator(),
+                                              futil.DataDirectoryFilter(),
+                                              file_extension='.mha')
 
     # load images for training and pre-process
     images = putil.pre_process_batch(crawler.data, pre_process_params, multi_process=False)
@@ -108,11 +118,19 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
     # initialize evaluator
     evaluator = putil.init_evaluator()
 
-    # crawl the training image directories
-    crawler = futil.FileSystemDataCrawler(data_test_dir,
-                                          LOADING_KEYS,
-                                          futil.BrainImageFilePathGenerator(),
-                                          futil.DataDirectoryFilter())
+
+    # crawl the test image directories
+    if pre_process_params['load_images_pre'][0] is False:
+        crawler = futil.FileSystemDataCrawler(data_test_dir,
+                                              LOADING_KEYS,
+                                              futil.BrainImageFilePathGenerator(),
+                                              futil.DataDirectoryFilter())
+    else:
+        crawler = futil.FileSystemDataCrawler(os.path.join(pre_process_params['load_images_pre'][1], 'test'),
+                                              LOADING_KEYS_PRE,
+                                              futil.BrainImageFilePathGenerator(),
+                                              futil.DataDirectoryFilter(),
+                                              file_extension='.mha')
 
     # load images for testing and pre-process
     pre_process_params['training'] = False

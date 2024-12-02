@@ -256,7 +256,10 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
     path = paths.pop(id_, '')  # the value with key id_ is the root directory of the image
     path_to_transform = paths.pop(structure.BrainImageTypes.RegistrationTransform, '')
     img = {img_key: sitk.ReadImage(path) for img_key, path in paths.items()}
-    transform = sitk.ReadTransform(path_to_transform)
+    if kwargs.get('load_images_pre')[0] is True:
+        transform = sitk.AffineTransform(3)  # creates identity transform that does not do anything
+    else:
+        transform = sitk.ReadTransform(path_to_transform)
     img = structure.BrainImage(id_, path, img, transform)
 
     # construct pipeline for brain mask registration
@@ -328,8 +331,8 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
         os.makedirs(img_dir, exist_ok=True)
         sitk.WriteImage(img.images[structure.BrainImageTypes.T1w], os.path.join(img_dir, 'T1_Pre.mha'), True)
         sitk.WriteImage(img.images[structure.BrainImageTypes.T2w], os.path.join(img_dir, 'T2_Pre.mha'), True)
-        sitk.WriteImage(img.images[structure.BrainImageTypes.GroundTruth], os.path.join(img_dir, 'GroundTruth_Pre.mha'), True)
-        sitk.WriteImage(img.images[structure.BrainImageTypes.BrainMask], os.path.join(img_dir, 'BrainMask_Pre.mha'), True)
+        sitk.WriteImage(img.images[structure.BrainImageTypes.GroundTruth], os.path.join(img_dir, 'labels_Pre.mha'), True)
+        sitk.WriteImage(img.images[structure.BrainImageTypes.BrainMask], os.path.join(img_dir, 'Brainmask_Pre.mha'), True)
 
     # extract the features
     feature_extractor = FeatureExtractor(img, **kwargs)

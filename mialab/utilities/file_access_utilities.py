@@ -55,22 +55,29 @@ class BrainImageFilePathGenerator(FilePathGenerator):
             str: The images' full file path.
         """
 
-        # the commented file_names are for the registration group
+        # Define potential file names for each type
+        file_name_patterns = {
+            structure.BrainImageTypes.T1w: ['T1native', 'T1_Pre'],
+            structure.BrainImageTypes.T2w: ['T2native', 'T2_Pre'],
+            structure.BrainImageTypes.GroundTruth: ['labels_native', 'labels_Pre'],
+            structure.BrainImageTypes.BrainMask: ['Brainmasknative', 'Brainmask_Pre'],
+        }
 
-        if file_key == structure.BrainImageTypes.T1w:
-            file_name = 'T1native'
-        elif file_key == structure.BrainImageTypes.T2w:
-            file_name = 'T2native'
-        elif file_key == structure.BrainImageTypes.GroundTruth:
-            file_name = 'labels_native'
-        elif file_key == structure.BrainImageTypes.BrainMask:
-            file_name = 'Brainmasknative'
-        elif file_key == structure.BrainImageTypes.RegistrationTransform:
+        # Special case for RegistrationTransform
+        if file_key == structure.BrainImageTypes.RegistrationTransform:
             return os.path.join(root_dir, 'affine.txt')
-        else:
-            raise ValueError('Unknown key')
 
-        return os.path.join(root_dir, file_name + file_extension)
+        # Get the list of possible file names for the given file_key
+        possible_file_names = file_name_patterns.get(file_key, [])
+
+        # Search for the first file that exists
+        for file_name in possible_file_names:
+            full_path = os.path.join(root_dir, file_name + file_extension)
+            if os.path.isfile(full_path):
+                return full_path
+
+        # If no file is found, raise an error
+        raise FileNotFoundError(f"No valid file found for key '{file_key}' in directory '{root_dir}'.")
 
 
 class DirectoryFilter(metaclass=abc.ABCMeta):
