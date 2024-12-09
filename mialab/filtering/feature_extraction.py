@@ -1,9 +1,11 @@
 """The feature extraction module contains classes for feature extraction."""
 import sys
+from multiprocessing.managers import Value
 
 import numpy as np
 import pymia.filtering.filter as fltr
 import SimpleITK as sitk
+from numpy.ma.core import nonzero
 from pymia.filtering.filter import FilterParams
 from radiomics import featureextractor
 
@@ -252,6 +254,177 @@ class RandomizedTrainingMaskGenerator:
 
         return mask
 
+class ROIParams(FilterParams):
+    """Custom FilterParams to hold ROI masks"""
+    def __init__(self, roi_masks: dict):
+        self.roi_masks = roi_masks
+
+    def get_roi_masks(self):
+        return self.roi_masks
+
+class PyradiomicsROIExtractor(fltr.Filter):
+    VALID_GLCM_FEATURES = {
+        'entropy': 'DifferenceEntropy',
+        'contrast': 'Contrast'
+    }
+
+    def __init__(self, enabled_feature_classes: list[str] = None, feature_params: dict=None):
+        super().__init__()
+        self.enabled_feature_classes = enabled_feature_classes or []
+        self.feature_params = feature_params or {}
+
+        # Adapt GLCM features to valid names
+        if "glcm" in self.enabled_feature_classes and "glcm" in self.feature_params:
+            adapted_features = {}
+            for glcm_feature in self.feature_params["glcm"]:
+                feature_lower = glcm_feature.lower()
+                if feature_lower in self.VALID_GLCM_FEATURES:
+                    valid_name = self.VALID_GLCM_FEATURES[feature_lower]
+                    adapted_features[valid_name] = True
+                else:
+                    raise ValueError(
+                        f"Invalid GLCM feature: '{glcm_feature}'. "
+                    )
+
+            self.feature_params["glcm"] = adapted_features
+
+
+    def execute(self, image: sitk.Image, params: ROIParams = None) -> dict:
+
+        roi_masks = params.get_roi_masks()
+        if roi_masks is None:
+            raise ValueError("Missing 'roi_masks' in parameters for ROI-based feature extraction")
+
+        extractor = featureextractor.RadiomicsFeatureExtractor()
+        extractor.disableAllFeatures()
+
+        # Enable feature classes
+        for feature_class in self.enabled_feature_classes:
+            extractor.enableFeatureClassByName(feature_class)
+            if feature_class in self.feature_params:
+                extractor.enableFeaturesByName(**{feature_class: self.feature_params[feature_class]})
+
+        feature_images = {}
+
+        for label, mask in roi_masks.items():
+            # Extract features for current ROI
+            feature_vector = extractor.execute(image, mask)
+
+            for feature_class in self.enabled_feature_classes:
+                for feature_name in self.feature_params.get(feature_class, []):
+                    feature_key = f"original_{feature_class}_{feature_name}"
+                    if feature_key not in feature_vector:
+                        print(f"Feature {feature_key} not found for label {label}. Creating filler image.")
+                        # Create a filler image (all zeros)
+                        filler_array = np.zeros_like(sitk.GetArrayFromImage(mask), dtype=np.float32)
+                        feature_image = sitk.GetImageFromArray(filler_array)
+                        feature_image.CopyInformation(image)
+                    else:
+                        # Create image with feature value across ROI
+                        feature_value = feature_vector[feature_key]
+                        mask_array = sitk.GetArrayFromImage(mask)
+
+                        feature_array = np.where(mask_array, feature_value, 0).astype(np.float32)
+
+                        feature_image = sitk.GetImageFromArray(feature_array)
+                        feature_image.CopyInformation(image)
+
+                        # Save feature image
+                        label = int(label)
+                        feature_type_key = f"{label}_{feature_class}_{feature_name}"
+                        feature_images[feature_type_key] = feature_image
+
+        return feature_images
+
+class PyradiomicsExtractor(fltr.Filter):
+    VALID_GLCM_FEATURES = {
+        'entropy': 'DifferenceEntropy',
+        'contrast': 'Contrast'
+    }
+
+    def __init__(self, enabled_feature_classes: list[str] = None, feature_params: dict=None):
+        super().__init__()
+
+        self.enabled_feature_classes = enabled_feature_classes or []
+        self.feature_params = feature_params or {}
+
+        # Adapt GLCM features to valid names
+        if "glcm" in self.enabled_feature_classes and "glcm" in self.feature_params:
+            adapted_features = {}
+            for glcm_feature in self.feature_params["glcm"]:
+                feature_lower = glcm_feature.lower()
+                if feature_lower in self.VALID_GLCM_FEATURES:
+                    valid_name = self.VALID_GLCM_FEATURES[feature_lower]
+                    adapted_features[valid_name] = True
+                else:
+                    raise ValueError(
+                        f"Invalid GLCM feature: '{glcm_feature}'. "
+                    )
+
+            self.feature_params["glcm"] = adapted_features
+
+    def execute(self, image: sitk.Image, mask: np.array = None, params: FilterParams = None) -> dict:
+
+        extractor = featureextractor.RadiomicsFeatureExtractor()
+        extractor.disableAllFeatures()
+
+        # Enable specified features
+        for feature_class in self.enabled_feature_classes:
+            extractor.enableFeatureClassByName(feature_class)
+            if feature_class in self.feature_params:
+                extractor.enableFeaturesByName(**{feature_class: self.feature_params[feature_class]})
+
+        # Make sure mask is binary with matching dimensions
+        if mask is not None:
+            # Make sure not empty
+            mask_array = sitk.GetArrayFromImage(mask).astype(np.uint8)
+            if np.count_nonzero(mask_array) == 0:
+                raise ValueError("The mask is empty; cannot perform feature extraction.")
+
+            # Check dimensions
+            if mask_array.shape != sitk.GetArrayFromImage(image).shape:
+                raise ValueError(
+                    f"Mask shape {mask_array.shape} does not match image shape {sitk.GetArrayFromImage(image).shape}.")
+            mask = sitk.GetImageFromArray(mask_array)
+            mask.CopyInformation(image)
+
+
+        # Perform feature extraction
+        feature_vector = extractor.execute(image, mask)
+
+        # Initialize composite image array
+        feature_images = {}
+
+        for feature_class in self.enabled_feature_classes:
+            for feature_name in self.feature_params.get(feature_class, []):
+                feature_key = f"original_{feature_class}_{feature_name}"
+
+                if feature_key not in feature_vector:
+                    print(
+                        f"Warning: Feature 'original_{feature_class}_{feature_name}' not found in extracted features.")
+                    continue
+
+                # Add feature values to composite image array
+                feature_value = feature_vector[feature_key]
+
+                if np.isscalar(feature_value):
+                    feature_image_array = np.full(sitk.GetArrayFromImage(image).shape, feature_value, dtype=np.float32)
+                else:
+                    mask_array = sitk.GetArrayFromImage(mask)
+                    feature_image_array = np.where(mask_array > 0, feature_value, 0).astype(np.float32)
+
+                feature_image = sitk.GetImageFromArray(feature_image_array.astype(np.float32))
+                feature_image.CopyInformation(image)
+
+                # Save feature image
+                feature_type_key = f"{feature_class}_{feature_name}"
+                feature_images[feature_type_key] = feature_image
+
+                for feature_type_key, feature_image in feature_images.items():
+                    print(f"{feature_type_key} Size:", feature_image.GetSize())
+
+        return feature_images
+
 
 class GlcmTextureFeatureExtractor(fltr.Filter):
 
@@ -344,3 +517,6 @@ class GlrlmTextureFeatureExtractor(fltr.Filter):
         feature_image.CopyInformation(image)
 
         return feature_image
+
+
+

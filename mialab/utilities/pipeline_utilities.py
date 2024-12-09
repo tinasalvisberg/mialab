@@ -3,6 +3,7 @@ import enum
 import os
 import typing as t
 import warnings
+from logging import Filter
 
 import numpy as np
 import pymia.data.conversion as conversion
@@ -16,7 +17,6 @@ import mialab.filtering.feature_extraction as fltr_feat
 import mialab.filtering.postprocessing as fltr_postp
 import mialab.filtering.preprocessing as fltr_prep
 import mialab.utilities.multi_processor as mproc
-
 
 atlas_t1 = sitk.Image()
 atlas_t2 = sitk.Image()
@@ -45,14 +45,73 @@ class FeatureImageTypes(enum.Enum):
     T1w_GRADIENT_INTENSITY = 3
     T2w_INTENSITY = 4
     T2w_GRADIENT_INTENSITY = 5
-    #GLCM
-    T1w_TEXTURE_ENTROPY = 6
-    T2w_TEXTURE_ENTROPY = 7
-    T1w_TEXTURE_CONTRAST = 8
-    T2w_TEXTURE_CONTRAST = 9
-    #GLRLM
-    T1w_TEXTURE_RLN = 10
-    T2w_TEXTURE_RLN = 11
+
+    # Voxel-based features (Pyradiomics)
+    T1w_VOXEL_BASED_GLCM_CONTRAST= 100
+    T1w_VOXEL_BASED_GLCM_DIFFERENCEENTROPY = 101
+    T1w_VOXEL_BASED_GLRLM_RUNLENGTHNONUNIFORMITY = 102
+
+    T2w_VOXEL_BASED_GLCM_CONTRAST = 200
+    T2w_VOXEL_BASED_GLCM_DIFFERENCEENTROPY = 201
+    T2w_VOXEL_BASED_GLRLM_RUNLENGTHNONUNIFORMITY= 202
+
+    # ROI-based features (Pyradiomics - one per label
+    T1w_ROI_BASED_0_GLCM_CONTRAST = 301
+    T1w_ROI_BASED_0_GLCM_DIFFERENCEENTROPY = 302
+    T1w_ROI_BASED_0_GLRLM_RUNLENGTHNONUNIFORMITY = 303
+
+    T2w_ROI_BASED_0_GLCM_CONTRAST = 401
+    T2w_ROI_BASED_0_GLCM_DIFFERENCEENTROPY = 402
+    T2w_ROI_BASED_0_GLRLM_RUNLENGTHNONUNIFORMITY = 403
+
+    T1w_ROI_BASED_1_GLCM_CONTRAST = 311
+    T1w_ROI_BASED_1_GLCM_DIFFERENCEENTROPY = 312
+    T1w_ROI_BASED_1_GLRLM_RUNLENGTHNONUNIFORMITY= 313
+
+    T2w_ROI_BASED_1_GLCM_CONTRAST = 411
+    T2w_ROI_BASED_1_GLCM_DIFFERENCEENTROPY = 412
+    T2w_ROI_BASED_1_GLRLM_RUNLENGTHNONUNIFORMITY= 413
+
+    T1w_ROI_BASED_2_GLCM_CONTRAST = 321
+    T1w_ROI_BASED_2_GLCM_DIFFERENCEENTROPY = 322
+    T1w_ROI_BASED_2_GLRLM_RUNLENGTHNONUNIFORMITY = 323
+
+    T2w_ROI_BASED_2_GLCM_CONTRAST = 421
+    T2w_ROI_BASED_2_GLCM_DIFFERENCEENTROPY = 422
+    T2w_ROI_BASED_2_GLRLM_RUNLENGTHNONUNIFORMITY = 423
+
+    T1w_ROI_BASED_3_GLCM_CONTRAST = 331
+    T1w_ROI_BASED_3_GLCM_DIFFERENCEENTROPY = 332
+    T1w_ROI_BASED_3_GLRLM_RUNLENGTHNONUNIFORMITY = 333
+
+    T2w_ROI_BASED_3_GLCM_CONTRAST = 431
+    T2w_ROI_BASED_3_GLCM_DIFFERENCEENTROPY = 432
+    T2w_ROI_BASED_3_GLRLM_RUNLENGTHNONUNIFORMITY = 433
+
+    T1w_ROI_BASED_4_GLCM_CONTRAST = 341
+    T1w_ROI_BASED_4_GLCM_DIFFERENCEENTROPY = 342
+    T1w_ROI_BASED_4_GLRLM_RUNLENGTHNONUNIFORMITY = 343
+
+    T2w_ROI_BASED_4_GLCM_CONTRAST = 441
+    T2w_ROI_BASED_4_GLCM_DIFFERENCEENTROPY = 442
+    T2w_ROI_BASED_4_GLRLM_RUNLENGTHNONUNIFORMITY  = 443
+
+    T1w_ROI_BASED_5_GLCM_CONTRAST = 351
+    T1w_ROI_BASED_5_GLCM_DIFFERENCEENTROPY = 352
+    T1w_ROI_BASED_5_GLRLM_RUNLENGTHNONUNIFORMITY = 353
+
+    T2w_ROI_BASED_5_GLCM_CONTRAST = 451
+    T2w_ROI_BASED_5_GLCM_DIFFERENCEENTROPY = 452
+    T2w_ROI_BASED_5_GLRLM_RUNLENGTHNONUNIFORMITY =453
+
+    T1w_ROI_BASED_8_GLCM_CONTRAST = 381
+    T1w_ROI_BASED_8_GLCM_DIFFERENCEENTROPY = 382
+    T1w_ROI_BASED_8_GLRLM_RUNLENGTHNONUNIFORMITY = 383
+
+    T2w_ROI_BASED_8_GLCM_CONTRAST = 481
+    T2w_ROI_BASED_8_GLCM_DIFFERENCEENTROPY = 482
+    T2w_ROI_BASED_8_GLRLM_RUNLENGTHNONUNIFORMITY = 483
+
 
 
 class FeatureExtractor:
@@ -66,9 +125,17 @@ class FeatureExtractor:
         """
         self.img = img
         self.training = kwargs.get('training', True)
+
         self.coordinates_feature = kwargs.get('coordinates_feature', False)
         self.intensity_feature = kwargs.get('intensity_feature', False)
-        self.gradient_intensity_feature = kwargs.get('gradient_intensity_feature', False),
+        self.gradient_intensity_feature = kwargs.get('gradient_intensity_feature', False)
+
+        if structure.BrainImageTypes.T2w in self.img.images:
+            self.img_shape = self.img.images[structure.BrainImageTypes.T2w].GetSize()
+        else:
+            self.img_shape = self.img.images[structure.BrainImageTypes.T1w].GetSize()
+
+        self.use_region_labels = kwargs.get('use_region_labels', False)
 
         self.glcm_features = []
         if kwargs.get('texture_contrast_feature', False):
@@ -76,7 +143,12 @@ class FeatureExtractor:
         if kwargs.get('texture_entropy_feature', False):
             self.glcm_features.append('entropy')
 
-        self.glrlm_features = kwargs.get('glrlm_features', False)
+        self.glrlm_features = kwargs.get('texture_rlnu_feature', False)
+
+        #if self.use_region_labels and not self.glcm_features and not self.glrlm_features:
+            #print("Both GLCM and GLRLM features are disabled. Using region labels does not make sense. use_region_labels was set to False")
+            # self.use_region_labels = False
+
 
     def execute(self) -> structure.BrainImage:
         """Extracts features from an image.
@@ -92,7 +164,7 @@ class FeatureExtractor:
             if structure.BrainImageTypes.T2w in self.img.images:
                 self.img.feature_images[FeatureImageTypes.ATLAS_COORD] = \
                     atlas_coordinates.execute(self.img.images[structure.BrainImageTypes.T2w])
-            else:
+            if structure.BrainImageTypes.T1w in self.img.images:
                 self.img.feature_images[FeatureImageTypes.ATLAS_COORD] = \
                     atlas_coordinates.execute(self.img.images[structure.BrainImageTypes.T1w])
 
@@ -100,7 +172,7 @@ class FeatureExtractor:
             if structure.BrainImageTypes.T2w in self.img.images:
                 self.img.feature_images[FeatureImageTypes.T2w_INTENSITY] = self.img.images[
                     structure.BrainImageTypes.T2w]
-            else:
+            if structure.BrainImageTypes.T1w in self.img.images:
                 self.img.feature_images[FeatureImageTypes.T1w_INTENSITY] = self.img.images[
                     structure.BrainImageTypes.T1w]
 
@@ -109,51 +181,157 @@ class FeatureExtractor:
             if structure.BrainImageTypes.T2w in self.img.images:
                 self.img.feature_images[FeatureImageTypes.T2w_GRADIENT_INTENSITY] = \
                     sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T2w])
-            else:
+            if structure.BrainImageTypes.T1w in self.img.images:
                 self.img.feature_images[FeatureImageTypes.T1w_GRADIENT_INTENSITY] = \
                     sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T1w])
 
-        if self.glcm_features:
-            for feature in self.glcm_features:
-                glcm_feature_extractor = fltr_feat.GlcmTextureFeatureExtractor(glcm_feature=feature)
+        if self.use_region_labels:
+            # ROI-based extraction
+            roi_masks = self._get_roi_masks(self.img.images[structure.BrainImageTypes.GroundTruth])
 
-                if structure.BrainImageTypes.T2w in self.img.images:
-                    feature_type = FeatureImageTypes[f"T2w_TEXTURE_{feature.upper()}"]
-                    self.img.feature_images[feature_type] = glcm_feature_extractor.execute(
-                        self.img.images[structure.BrainImageTypes.T2w],
-                        self.img.images[structure.BrainImageTypes.BrainMask]
-                    )
-                    print(f"T2w: Extracted GLCM feature {feature}")
-                else:
-                    feature_type = FeatureImageTypes[f"T1w_TEXTURE_{feature.upper()}"]
-                    self.img.feature_images[feature_type] = glcm_feature_extractor.execute(
-                        self.img.images[structure.BrainImageTypes.T1w],
-                        self.img.images[structure.BrainImageTypes.BrainMask]
-                    )
-                    print(f"T2w: Extracted GLCM feature {feature}")
+            # Prepare parameters for relevant features
+            feature_classes = []
+            features = {}
 
-        if self.glrlm_features:
-            glrlm_feature_extractor = fltr_feat.GlrlmTextureFeatureExtractor("RunLengthNonUniformity")
+            if self.glcm_features:
+                feature_classes.append("glcm")
+                features["glcm"] = self.glcm_features
+            if self.glrlm_features:
+                feature_classes.append("glrlm")
+                features["glrlm"] = ["RunLengthNonUniformity"]
+
+            # Use custom FilterParams class to pass masks
+            roi_params = fltr_feat.ROIParams(roi_masks=roi_masks)
+
+            # Initialize and execute ROI extractor
+            roi_extractor = fltr_feat.PyradiomicsROIExtractor(
+                enabled_feature_classes = feature_classes,
+                feature_params = features)
 
             if structure.BrainImageTypes.T2w in self.img.images:
-                feature_type = FeatureImageTypes[f"T2w_TEXTURE_RLN"]
-                self.img.feature_images[feature_type] = glrlm_feature_extractor.execute(
+                roi_features = roi_extractor.execute(
                     self.img.images[structure.BrainImageTypes.T2w],
-                    self.img.images[structure.BrainImageTypes.BrainMask]
-                )
-                print(f"T2w: Extracted GLRLM feature")
-            else:
-                feature_type = FeatureImageTypes[f"T1w_TEXTURE_RLN"]
-                self.img.feature_images[feature_type] = glrlm_feature_extractor.execute(
-                    self.img.images[structure.BrainImageTypes.T1w],
-                    self.img.images[structure.BrainImageTypes.BrainMask]
-                )
-                print(f"T1w: Extracted GLRLM feature")
+                    params=roi_params)
+                #print("ROI Features:", roi_features)
 
+                for feature_key, feature_image in roi_features.items():
+                    # Split the feature_key to extract the label
+                    parts = feature_key.split('_')
+                    label = int(parts[0])  # Extract the label as an integer
+                    feature_class = parts[1]  # Extract the feature class (e.g., 'glcm')
+                    feature_name = parts[2]  # Extract the feature name (e.g., 'Contrast')
+
+                    # Map to FeatureImageType
+                    feature_type = FeatureImageTypes[
+                        f"T2w_ROI_BASED_{label}_{feature_class.upper()}_{feature_name.upper()}"]
+                    self.img.feature_images[feature_type] = feature_image
+                    print(f"T2w: Extracted ROI features for {label} with type {feature_type}")
+
+            if structure.BrainImageTypes.T1w in self.img.images:
+                roi_features = roi_extractor.execute(
+                    self.img.images[structure.BrainImageTypes.T1w],
+                    params=roi_params)
+
+                for feature_key, feature_image in roi_features.items():
+                    # Split the feature_key to extract the label
+                    parts = feature_key.split('_')
+                    label = int(parts[0])  # Extract the label as an integer
+                    feature_class = parts[1]  # Extract the feature class (e.g., 'glcm')
+                    feature_name = parts[2]  # Extract the feature name (e.g., 'Contrast')
+
+                    # Map to FeatureImageType
+                    feature_type = FeatureImageTypes[
+                        f"T1w_ROI_BASED_{label}_{feature_class.upper()}_{feature_name.upper()}"]
+                    self.img.feature_images[feature_type] = feature_image
+                    print(f"T1w: Extracted ROI features for {label} with type {feature_type}")
+        else:
+            # Voxel-based feature extraction
+
+            feature_classes = []
+            features = {}
+
+            if self.glcm_features:
+                feature_classes.append("glcm")
+                features["glcm"] = self.glcm_features
+            if self.glrlm_features:
+                feature_classes.append("glrlm")
+                features["glrlm"] = ["RunLengthNonUniformity"]
+            if not feature_classes:
+                print(f"No feature extraction using pyradiomics done.")
+                pass
+
+            # Initialize and execute voxel extractor
+            extractor = fltr_feat.PyradiomicsExtractor(
+                enabled_feature_classes=feature_classes,
+                feature_params=features)
+
+            if structure.BrainImageTypes.T2w in self.img.images:
+                voxel_features = extractor.execute(
+                    self.img.images[structure.BrainImageTypes.T2w],
+                    mask=self.img.images[structure.BrainImageTypes.BrainMask]
+                )
+                for feature_class in extractor.enabled_feature_classes:
+                    for feature_name in extractor.feature_params.get(feature_class, []):
+                        # Pyradiomics key format
+                        feature_key = f"{feature_class}_{feature_name}"
+
+                        if feature_key in voxel_features:
+                            # Map to FeatureImageType
+                            feature_type = FeatureImageTypes[
+                                f"T2w_VOXEL_BASED_{feature_class.upper()}_{feature_name.upper()}"]
+                            self.img.feature_images[feature_type] = voxel_features[feature_key]
+                        else:
+                            print(f"Feature '{feature_key}' not found in extraction.")
+
+            if structure.BrainImageTypes.T1w in self.img.images:
+                voxel_features = extractor.execute(
+                    self.img.images[structure.BrainImageTypes.T1w],
+                   mask=self.img.images[structure.BrainImageTypes.BrainMask]
+                )
+                for feature_class in extractor.enabled_feature_classes:
+                    for feature_name in extractor.feature_params.get(feature_class, []):
+                        # Pyradiomics key format
+                        feature_key = f"{feature_class}_{feature_name}"
+
+                        if feature_key in voxel_features:
+                            # Map to FeatureImageType
+                            feature_type = FeatureImageTypes[
+                                f"T1w_VOXEL_BASED_{feature_class.upper()}_{feature_name.upper()}"]
+                            self.img.feature_images[feature_type] = voxel_features[feature_key]
+                        else:
+                            print(f"Feature '{feature_key}' not found in extraction.")
 
         self._generate_feature_matrix()
 
         return self.img
+
+    def _get_roi_masks(self, ground_truth: sitk.Image):
+        roi_masks = {}
+        if self.training:
+            ground_truth_array = sitk.GetArrayFromImage(ground_truth)
+            unique_labels = np.unique(ground_truth_array)
+
+            for label in unique_labels:
+                if label == 0:
+                    continue
+                binary_mask = (ground_truth_array == label).astype(np.uint8)
+                mask_image = sitk.GetImageFromArray(binary_mask)
+                mask_image.CopyInformation(ground_truth)
+
+                roi_masks[label] = mask_image
+
+        else:
+            # Create placeholder roi_masks during testing
+            brain_mask = self.img.images.get(structure.BrainImageTypes.BrainMask, None)
+
+            if brain_mask is not None:
+                for label in [1, 2, 3, 4, 5, 8]:
+                    roi_masks[label] = brain_mask
+            else:
+                raise ValueError("BrainMask is not available in testing data")
+
+        return roi_masks
+
 
     def _generate_feature_matrix(self):
         """Generates a feature matrix."""

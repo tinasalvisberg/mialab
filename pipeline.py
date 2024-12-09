@@ -65,12 +65,14 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
                           'load_images_pre': [False, r'C:\Users\tinas\PycharmProjects\mialab\mia-preprocessed\2024-12-02-21-30-15'],
                           'coordinates_feature': True,
                           'intensity_feature': True,
-                          'gradient_intensity_feature': False,
+                          'gradient_intensity_feature': True,
+                          # Use for ROI-based extraction
+                          'use_region_labels': True,
                           # GLCM
-                          'texture_contrast_feature': False,
+                          'texture_contrast_feature': True,
                           'texture_entropy_feature': False,
-                          # GLRLM TODO: Implement GLRLM
-                          'texture_rln_feature': True
+                          # GLRLM
+                          'texture_rlnu_feature': True
                           }
 
     if pre_process_params['load_images_pre'][0] is False:
