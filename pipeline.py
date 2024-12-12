@@ -62,17 +62,17 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
                           'skullstrip_pre': True,
                           'normalization_pre': True,
                           'registration_pre': True,
-                          'load_images_pre': [False, r'C:\Users\tinas\PycharmProjects\mialab\mia-preprocessed\2024-12-02-21-30-15'],
+                          'load_images_pre': [True, r'mia-preprocessed/preprocessed_baseline'],
                           'coordinates_feature': True,
                           'intensity_feature': True,
                           'gradient_intensity_feature': True,
                           # Use for ROI-based extraction
-                          'use_region_labels': True,
+                          'use_region_labels': False,
                           # GLCM
-                          'texture_contrast_feature': True,
+                          'texture_contrast_feature': False,
                           'texture_entropy_feature': False,
                           # GLRLM
-                          'texture_rlnu_feature': True
+                          'texture_rlnu_feature': False
                           }
 
     if pre_process_params['load_images_pre'][0] is False:
@@ -100,11 +100,10 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
     data_train = np.concatenate([img.feature_matrix[0] for img in images])
     labels_train = np.concatenate([img.feature_matrix[1] for img in images]).squeeze()
 
-    # Todo: Set Random forest parameters properly
     # warnings.warn('Random forest parameters not properly set.')
-    forest = sk_ensemble.RandomForestClassifier(max_features=images[0].feature_matrix[0].shape[1],
-                                                n_estimators=3,
-                                                max_depth=4)
+    forest = sk_ensemble.RandomForestClassifier(max_features='sqrt',
+                                                n_estimators=200,
+                                                max_depth=48)
 
     start_time = timeit.default_timer()
     forest.fit(data_train, labels_train)

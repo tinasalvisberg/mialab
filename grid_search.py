@@ -65,8 +65,8 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
                           'registration_pre': True,
                           'load_images_pre': [False, r'C:\Users\tinas\PycharmProjects\mialab\mia-preprocessed\2024-12-02-21-30-15'],
                           'coordinates_feature': True,
-                          'intensity_feature': False,
-                          'gradient_intensity_feature': False,
+                          'intensity_feature': True,
+                          'gradient_intensity_feature': True,
                           # Use for ROI-based extraction
                           'use_region_labels': False,
                           # GLCM
@@ -101,12 +101,11 @@ def main(result_dir: str, preprocess_dir: str, data_atlas_dir: str, data_train_d
     data_train = np.concatenate([img.feature_matrix[0] for img in images])
     labels_train = np.concatenate([img.feature_matrix[1] for img in images]).squeeze()
 
-    # Todo: Set Random forest parameters properly
     # warnings.warn('Random forest parameters not properly set.')
     forest = sk_ensemble.RandomForestClassifier()
     param_grid = {
-        'n_estimators': [10, 50, 100],
-        'max_depth': [4, 8, 12, 24],
+        'n_estimators': [50, 100, 150, 200],
+        'max_depth': [12, 24, 36, 48],
         'max_features': [images[0].feature_matrix[0].shape[1], 'sqrt', 'log2']
     }
 
