@@ -10,6 +10,9 @@ def main(result_folder):
     df = pd.read_csv(results_file_path, sep=';')
     summary = pd.read_csv(summary_file_path, sep=';')
 
+    # remove post-processed results from df
+    df = df[~df['SUBJECT'].str.endswith('-PP')]
+
     print(f'Results from: {result_folder}\n')
 
     labels = df['LABEL'].unique()
