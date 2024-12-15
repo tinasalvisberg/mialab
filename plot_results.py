@@ -39,6 +39,13 @@ def main(result_folder):
         plt.xlabel("Label")
         # plt.xticks(rotation=45)  # Rotate x-axis labels if needed
         plt.grid(True)
+
+        # Set vertical axis limits
+        if key == "DICE":
+            plt.ylim(0, 1)  # DICE scores range from 0 to 1
+        elif key == "HDRFDST":
+            plt.ylim(0, 16)  # Hausdorff distance range from 0 to 16
+
         plt.show()
 
 
