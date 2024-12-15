@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import warnings
 
-path_to_xlsx = f'results_analysis/results_consistency.xlsx'
+path_to_xlsx = f'results_analysis/results_consistency_cleaned.xlsx'
 experiment_names = ['Baseline', 'Experiment 1', 'Experiment 2', 'Experiment 3', 'Experiment 4', 'Experiment 5',
                     'Experiment 6', 'Experiment 7']
 
