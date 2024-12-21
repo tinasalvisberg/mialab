@@ -20,12 +20,12 @@ Test the installation by running
 ## Pipeline settings ⚙️
 In the file `pipeline.py` you will find the preprocessing parameters in a dictionary called `pre_process_params`. The following settings can be made:
 
-### Saving and loading images after pre-preprocessing
+### Saving and loading images after pre-preprocessing 📂
 When `load_images_pre` is set to `False` the whole pipeline will run as usual and the pre-processed images will be saved in a time-stamped folder in the `mia-preprocessed` folder.
 
 When you want to save time during execution or make the results as reproducible as possible you can load the saved pre-processed images from a folder. Set `load_images_pre` to `True` and indicate the path to the folder that you want the images to load from. The steps skull-stripping, normalisation and registration will then automatically be skipped and you do not need to deactivate them manually.
 
-### Selecting features
+### Selecting features 🧪
 The features for the feature extraction can be toggled individually. From the original pipeline:
 * Coordinates: `coordinates_feature`
 * Intensity: `intensity_feature`
