@@ -1,4 +1,4 @@
-# MIA Lab Group 6
+# MIA Lab Group 6 🧠🩻👩‍💻
 Welcome to the project group 6 repository of the autumn semester 2024 MIA Lab course 👋
 
 This repository has been forked from the [mialab repository](https://github.com/ubern-mialab/mialab).
