@@ -32,9 +32,9 @@ The features for the feature extraction can be toggled individually. From the or
 * Gradient intensity: `gradient_intensity_feature`
 
 Features from PyRadiomics:
-* Gray Level Co-occurrence Matrix Contrast: `texture_contrast_feature`
-* Gray Level Co-occurrence Matrix Difference Entropy: `texture_entropy_feature`
-* Gray Level Run Length Matrix Run Length Non-Uniformity: `texture_rlnu_feature`
+* Gray Level Co-occurrence Matrix - Contrast: `texture_contrast_feature`
+* Gray Level Co-occurrence Matrix - Difference Entropy: `texture_entropy_feature`
+* Gray Level Run Length Matrix - Run Length Non-Uniformity: `texture_rlnu_feature`
 
 ## Run the code 🏃‍♀️
 Run the file `pipeline.py`.
