@@ -1,48 +1,34 @@
-# Medical Image Analysis Laboratory
+# MIA Lab Group 6
+Welcome to the project group 6 repository of the autumn semester 2024 MIA Lab course 👋
 
-Welcome to the medical image analysis laboratory (MIALab).
-This repository contains all code you will need to get started with classical medical image analysis.
+This repository has been forked from the [mialab repository](https://github.com/ubern-mialab/mialab).
 
-During the MIALab you will work on the task of brain tissue segmentation from magnetic resonance (MR) images.
-We have set up an entire pipeline to solve this task, specifically:
+## Focus topic: feature extraction 💡
+Is less more when it comes to feature extraction?
 
-- Pre-processing
-- Registration
-- Feature extraction
-- Voxel-wise tissue classification
-- Post-processing
-- Evaluation
+**Hypothesis:** a smaller, curated set of features can improve segmentation, compared to using a larger, unfiltered set.
 
-After you complete the exercises, dive into the 
-    
-    pipeline.py 
+To test the hypothesis, radiomics features are extracted using [pyradiomics](https://pyradiomics.readthedocs.io/en/latest/index.html). The full project report is available as a PDF inside this repository.
 
-script to learn how all of these steps work together. 
+## Installation 🔨
+Set up an environment and install the libraries listed in `requirements.txt`.
 
-During the laboratory you will get to know the entire pipeline and investigate one of these pipeline elements in-depth.
-You will get to know and to use various libraries and software tools needed in the daily life as biomedical engineer or researcher in the medical image analysis domain.
-
-Enjoy!
-
-----
-## Group 6: Is less more when it comes to feature extraction? 
-
-**Hypothesis:** Using radiomics features on top of raw image data improves the segmentation result.
-
-### Installation
-Make sure to install [pyradiomics](https://pyradiomics.readthedocs.io/en/latest/index.html) using `requirement.txt`:
-
-    python -m pip install pyradiomics
-
-Test installation with
+Test the installation by running
 
     python .\test\test_pyradiomics.py
 
-### Commands
+## Pipeline settings ⚙️
+In the file `pipeline.py` you will find the preprocessing parameters in a dictionary called `pre_process_params`. The following settings can be made:
+
+### Saving and loading images after pre-preprocessing
+
+
+## Run the code 🏃‍♀️
+Run the file `pipeline.py`
+
+## Plot results 📊
 Create plots from results
 
     python plot_results.py MIA_RESULTS_FOLDER_NAME
 
-----
-
-Found a bug or do you have suggestions? Open an issue or better submit a pull request.
+Currently, this plots the results without post-processing as no post-processing is implemented. The file `plot_results.py` would need to be adapted to plot the post-processed results.
