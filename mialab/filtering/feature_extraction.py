@@ -263,12 +263,23 @@ class ROIParams(FilterParams):
         return self.roi_masks
 
 class PyradiomicsROIExtractor(fltr.Filter):
+    """
+    Custom feature extraction filter using Pyradiomics for ROI-based feature extraction.
+    """
     VALID_GLCM_FEATURES = {
         'entropy': 'DifferenceEntropy',
         'contrast': 'Contrast'
     }
 
     def __init__(self, enabled_feature_classes: list[str] = None, feature_params: dict=None):
+        """
+        Initializes a feature extractor with selected feature classes and parameters.
+
+        Args:
+            enabled_feature_classes (list[str]): A list of feature classes to enable.
+            feature_params (dict): Feature-specific parameters.
+        """
+
         super().__init__()
         self.enabled_feature_classes = enabled_feature_classes or []
         self.feature_params = feature_params or {}
@@ -290,7 +301,16 @@ class PyradiomicsROIExtractor(fltr.Filter):
 
 
     def execute(self, image: sitk.Image, params: ROIParams = None) -> dict:
+        """
+        Executes the feature extraction for each ROI in the input mask.
 
+        Args:
+            image (sitk.Image): The input image.
+            params (ROIParams): Contains ROI masks as input parameters
+
+        Returns:
+            dict: Dictionary of feature images keyed by ROI label, feature class, and feature name
+        """
         roi_masks = params.get_roi_masks()
         if roi_masks is None:
             raise ValueError("Missing 'roi_masks' in parameters for ROI-based feature extraction")
@@ -337,14 +357,23 @@ class PyradiomicsROIExtractor(fltr.Filter):
         return feature_images
 
 class PyradiomicsExtractor(fltr.Filter):
+    """
+    Feature extractor class that supports full-image feature extraction using Pyradiomics.
+    """
     VALID_GLCM_FEATURES = {
         'entropy': 'DifferenceEntropy',
         'contrast': 'Contrast'
     }
 
     def __init__(self, enabled_feature_classes: list[str] = None, feature_params: dict=None):
-        super().__init__()
+        """
+        Initializes the extractor with enable feature classes and their parameters.
 
+        Args:
+            enabled_feature_classes (list[str]): A list of feature classes to enable.
+            feature_params (dict): Feature-specific parameters
+        """
+        super().__init__()
         self.enabled_feature_classes = enabled_feature_classes or []
         self.feature_params = feature_params or {}
 
@@ -364,6 +393,17 @@ class PyradiomicsExtractor(fltr.Filter):
             self.feature_params["glcm"] = adapted_features
 
     def execute(self, image: sitk.Image, mask: np.array = None, params: FilterParams = None) -> dict:
+        """
+        Executes the feature extraction within binary mask
+
+        Args:
+            image (sitk.Image): The input image
+            mask (sitk.Image): Binary mask for feature extraction region
+            params (FilterParams): Additional filter parameters
+
+        Returns:
+            dict: A dictionary of feature images keyed by feature class and feature name
+        """
 
         extractor = featureextractor.RadiomicsFeatureExtractor()
         extractor.disableAllFeatures()
